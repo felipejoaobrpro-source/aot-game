@@ -72,6 +72,11 @@ canvas{display:block;position:fixed;inset:0;width:100%;height:100%;z-index:0}
 #bX{right:calc(var(--r) + 20px);bottom:calc(var(--b) + 162px)}
 #bW{right:calc(var(--r) + 80px);bottom:calc(var(--b) + 162px)}
 @media (orientation:portrait){#bX{right:calc(var(--r) + 80px);bottom:calc(var(--b) + 232px)}#bW{right:calc(var(--r) + 140px);bottom:calc(var(--b) + 112px)}#obj{max-width:60vw;top:calc(var(--t) + 118px);left:calc(var(--l) + 16px);transform:none;text-align:left}}
+#boss{position:fixed;z-index:5;top:calc(var(--t) + 96px);left:50%;transform:translateX(-50%);display:none;font-size:12px;text-align:center;background:rgba(20,24,22,.65);padding:4px 10px;border-radius:6px;pointer-events:none}
+#bars{position:fixed;inset:0;z-index:9;display:none;pointer-events:none}
+#bars:before,#bars:after{content:"";position:absolute;left:0;right:0;height:12vh;background:#000}
+#bars:before{top:0}#bars:after{bottom:0}
+#bars span{position:absolute;bottom:3vh;left:0;right:0;text-align:center;font-size:17px;z-index:2;text-shadow:0 1px 4px #000}
 </style>
 </head>
 <body>
@@ -99,8 +104,10 @@ canvas{display:block;position:fixed;inset:0;width:100%;height:100%;z-index:0}
 <div id="pal"><button class="pc" id="pr" style="background:#c0392b"></button><button class="pc" id="pg" style="background:#2f8f4e"></button><button class="pc" id="pk" style="background:#1c1c1c"></button></div>
 <div id="hurt"></div><button class="top" id="bE">Layout</button><button class="top" id="bF">Tela cheia</button><button class="top" id="bI">IA: ligada</button><button class="top" id="bO">Ordens</button>
 <div id="edt"><span>Arraste os controles; toque num para o tamanho</span><label>Tamanho <input type="range" id="esz" min="0.6" max="1.8" step="0.05" value="1"></label><button id="erst">Redefinir</button><button id="eok">Concluir</button></div>
+<div id="boss"></div>
+<div id="bars"><span>O Capitão enfrenta a Titã Fêmea</span></div>
 <div id="msg"></div>
-<div id="intro"><div><h1>Equipamento de manobra</h1>
+<div id="intro"><div><h1>Equipamento de manobra <small style="font-size:11px;opacity:.6">v6</small></h1>
 <div class="mrow"><button class="mbtn" id="mFree">Prática livre</button><button class="mbtn" id="mExp">Expedição</button></div>
 <div id="mopt">Soldados na expedição: <input type="range" id="nSol" min="12" max="60" step="4" value="40"> <b id="nSolV">40</b> (mais soldados = percurso maior)</div>
 <div id="mopt">Titãs: <input type="range" id="tDen" min="1" max="5" step="1" value="3"> <b id="tDenV">Normal</b></div>
@@ -329,8 +336,7 @@ var hero=new T.Group();hero.rotation.order='YXZ';
 var mat=function(c){return new T.MeshLambertMaterial({color:c})};
 var bx=function(w,h,d,c,x,y,z,par){var m=new T.Mesh(new T.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);(par||hero).add(m);return m};
 var sp3=function(r,c,x,y,z,sx,sy,sz){var m=new T.Mesh(new T.SphereGeometry(r,12,10),mat(c));m.position.set(x,y,z);m.scale.set(sx||1,sy||1,sz||1);hero.add(m);return m};
-bx(.3,.62,.32,0xe9e5d8,-.17,-.55,0);bx(.3,.62,.32,0xe9e5d8,.17,-.55,0);
-bx(.34,.26,.44,0x3b2a1e,-.17,-.93,-.04);bx(.34,.26,.44,0x3b2a1e,.17,-.93,-.04);
+var hLegPh=0,hLegs=[-1,1].map(function(k){var lg=new T.Group();lg.position.set(k*.17,-.22,0);hero.add(lg);bx(.3,.62,.32,0xe9e5d8,0,-.33,0,lg);bx(.34,.26,.44,0x3b2a1e,0,-.71,-.04,lg);return lg});
 bx(.72,.72,.42,0xeeebe2,0,.22,0);
 bx(.1,.76,.46,0x4a3322,-.2,.22,0);bx(.1,.76,.46,0x4a3322,.2,.22,0);
 bx(.76,.14,.46,0x4a3322,0,-.15,0);bx(.7,.08,.46,0x4a3322,0,.05,0);
@@ -380,11 +386,11 @@ function fwd(){var cp=Math.cos(pitch);return new T.Vector3(-Math.sin(yaw)*cp,Mat
 function hipPos(s){hero.updateMatrixWorld(true);return hero.localToWorld(new T.Vector3(s*.3,-.15,-.42))}
 function release(h){h.a=null;h.tgt=null;h.onT=null;h.line.visible=false;h.head.visible=false}
 function fire(h,sx,sy){
-  if(mounted)dismount(true);
   ray.setFromCamera(new T.Vector2(sx===undefined?0:sx/innerWidth*2-1,sy===undefined?0:-(sy/innerHeight)*2+1),cam);
   var hs=ray.intersectObjects(targets,false),hit=null;
   for(var q=0;q<hs.length;q++){var o=hs[q].object,dm=o.userData.dummy;if(o!==ground&&!(dm&&dm.dead)&&!o.userData.gone&&hs[q].point.distanceTo(P)<=140){hit=hs[q];break}}
   if(hit){
+    if(mounted)dismount(true);
     h.onT=hit.object.userData.dummy||null;if(h.onT)h.loc=h.onT.g.worldToLocal(hit.point.clone());
     h.tgt=hit.point.clone();h.hp=hipPos(h.side);h.a=null;h.len=Math.max(3,hit.point.distanceTo(P));
     h.line.visible=true;h.head.visible=true;h.head.position.copy(h.hp);h.head.lookAt(h.tgt);
@@ -637,8 +643,8 @@ makeHorse(-12.5,-6.5,Math.PI/2,0x7a4a2a);makeHorse(-12.5,0,Math.PI/2,0xb08a60);m
 makeHorse(-12,252,0,0x6a4a30);makeHorse(0,252,0,0xc0a070);makeHorse(12,252,0,0x2f2a28);
 function toggleMount(){
   if(mounted){dismount(false);return}
-  var best=null,bd=7;
-  horses.forEach(function(h){var dd=Math.hypot(h.p.x-P.x,h.p.z-P.z);if(dd<bd&&!h.owner&&P.y<5&&Math.hypot(h.v.x,h.v.z)<5){bd=dd;best=h}});
+  var best=null,bd=14;if(myHorse&&!myHorse.owner&&Math.hypot(myHorse.p.x-P.x,myHorse.p.z-P.z)<30&&Math.hypot(myHorse.v.x,myHorse.v.z)<8){best=myHorse;bd=0}
+  horses.forEach(function(h){var dd=Math.hypot(h.p.x-P.x,h.p.z-P.z);if(dd<bd&&!h.owner&&P.y<terrH(P.x,P.z)+7&&Math.hypot(h.v.x,h.v.z)<8){bd=dd;best=h}});
   if(!best){toast('Chegue perto de um cavalo');return}
   mounted=best;myHorse=best;best.call=false;P.set(best.p.x,best.p.y,best.p.z);V.set(best.v.x,0,best.v.z);best.sp=Math.hypot(V.x,V.z);hooks.forEach(release);grounded=true;toast('Montado');
 }
@@ -701,6 +707,10 @@ function faceTex(v,skin){
     f.fillStyle='#4a0f0f';f.fillRect(34,66,60,40);
     f.fillStyle='#f4efe6';for(var u1=36;u1<92;u1+=10)f.fillRect(u1,67,8,11);
     f.fillStyle='#a04040';f.fillRect(50,92,28,12);
+  }else if(v===3){
+    f.fillStyle='#fff';f.fillRect(24,34,28,14);f.fillRect(76,34,28,14);f.fillStyle='#3a5a8a';f.fillRect(34,35,10,12);f.fillRect(86,35,10,12);
+    f.fillStyle='#1a1a1a';f.fillRect(22,30,32,4);f.fillRect(74,30,32,4);f.fillRect(20,26,6,6);f.fillRect(102,26,6,6);
+    f.fillStyle='#b88a6c';f.fillRect(60,56,4,10);f.fillRect(66,56,4,10);f.fillStyle='#a04050';f.fillRect(48,82,32,8);
   }else{
     f.fillStyle='#2a2a2a';f.fillRect(22,38,32,6);f.fillRect(74,38,32,6);
     f.fillStyle='#b88a6c';f.fillRect(58,56,5,10);f.fillRect(66,56,5,10);
@@ -715,7 +725,8 @@ var TK=[
   {tw:.75,al:1.4,hs:.9,hair:0x1a1a1a,skin:0xd8b394,face:2,spd:8},
   {tw:1.1,al:1,hs:1.5,hair:0x8a3a22,skin:0xe2bd9a,face:1,spd:4.5},
   {tw:.8,al:1.6,hs:1,hair:0x222222,skin:0xcbbfae,face:2,spd:13,ab:1},
-  {tw:1.2,al:1.35,hs:1.2,hair:0x101010,skin:0xc4b3a1,face:1,spd:9,ab:2}
+  {tw:1.2,al:1.35,hs:1.2,hair:0x101010,skin:0xc4b3a1,face:1,spd:9,ab:2},
+  {tw:.95,al:1.15,hs:1,hair:0xc9a24a,skin:0xcdb89a,face:3,spd:11,fem:1}
 ];
 var dummies=[],debris=[],tgList=[],tnow=0,tpv=new T.Vector3(),tvv=new T.Vector3(),stats={kp:0,ks:0,lost:0};
 function ease(x){return x*x*(3-2*x)}
@@ -745,7 +756,7 @@ function makeTitan(x,z,sc,ki){
   dm.eye=new T.Vector3(0,6.7+1.2*K.hs,1.3*K.hs);
   scene.add(g);g.updateMatrixWorld(true);
   g.traverse(function(o){if(o.isMesh)targets.push(o)});
-  dm.hr=(1.5*K.tw+1.1)*sc;dm.hh=9.6*sc*(.85+.15*K.hs);
+  dm.hr=(1.5*K.tw+.45)*sc;dm.hh=9.6*sc*(.85+.15*K.hs);
   dm.box={min:new T.Vector3(),max:new T.Vector3(),dyn:true};setBox(dm,false);boxes.push(dm.box);if(gbuilt)dynB.push(dm.box);
   dummies.push(dm);return dm;
 }
@@ -831,7 +842,7 @@ function hurtPlayer(d,fx,fz){
 }
 function aiTitan(dm,dt){
   dm.sp=0;
-  if(!AIon||dm.dead||dm.down||dm.blind)return;
+  if(!AIon||dm.dead||dm.down||dm.blind||dm.bound||dm.stunT>0)return;
   var K=dm.K,sense=(140+35*dm.sc)*(K.ab?1.4:1),reach=2.4+2.2*dm.sc;
   if(dm.held){
     dm.holdT+=dt;holdPos(dm);
@@ -905,40 +916,38 @@ function slash(){
 function doHit(){
   var f=fwd();
   trail.position.copy(P).addScaledVector(f,2.2);trail.position.y+=.3;trail.quaternion.copy(cam.quaternion);trail.rotateZ(sk*.7);trailT=.25;
-  var type=null,tg=null,arm=0;
+  var S=[P.clone().addScaledVector(f,1.8),P.clone().addScaledVector(f,3.4)],best=null,bs=1;
   dummies.forEach(function(dm){
     if(dm.dead)return;
     dm.g.updateMatrixWorld(true);
-    var behind=dm.down||(P.x-dm.x)*dm.fx+(P.z-dm.z)*dm.fz<.5*dm.sc,w=dm.g.localToWorld(dm.nape.clone()).sub(P);
-    if(behind&&w.length()<7&&w.normalize().dot(f)>0){type='nape';tg=dm;return}
-    if(type==='nape')return;
-    var fr=(P.x-dm.x)*dm.fx+(P.z-dm.z)*dm.fz>0,we=dm.g.localToWorld(dm.eye.clone()).sub(P);
-    if(fr&&we.length()<4+1.5*dm.sc&&we.normalize().dot(f)>.35){type='eye';tg=dm;return}
-    if(type==='eye')return;
-    for(var i=0;i<2;i++){
-      if(dm.ripped[i])continue;
-      var wa=dm.arms[i].localToWorld(new T.Vector3(0,-1.6*dm.K.al,0)).sub(P);
-      if(wa.length()<2.6+1.4*dm.sc&&wa.normalize().dot(f)>.2){type='arm';tg=dm;arm=i;return}
-    }
-    if(type==='arm')return;
-    var w2=dm.g.localToWorld(new T.Vector3(0,4,0)).sub(P);
-    if(P.y<9.6*dm.sc&&w2.length()<5+3*dm.sc&&w2.normalize().dot(f)>0){type='body';tg=dm}
+    var sc=dm.sc,K=dm.K,side=(P.x-dm.x)*dm.fx+(P.z-dm.z)*dm.fz,Z=[];
+    if(dm.down||side<.5*sc)Z.push(['nape',dm.g.localToWorld(dm.nape.clone()),2.6+.5*sc]);
+    if(side>0)Z.push(['eye',dm.g.localToWorld(dm.eye.clone()),2.4+.5*sc]);
+    for(var i=0;i<2;i++)if(!dm.ripped[i])Z.push(['arm',dm.arms[i].localToWorld(new T.Vector3(0,-1.6*K.al,0)),1.6+.7*sc,i]);
+    var lw=.7+.3*K.tw;
+    Z.push(['leg',dm.g.localToWorld(new T.Vector3(-.6*lw,1.8,0)),1.6*sc+.9]);Z.push(['leg',dm.g.localToWorld(new T.Vector3(.6*lw,1.8,0)),1.6*sc+.9]);
+    Z.push(['body',dm.g.localToWorld(new T.Vector3(0,5.2,0)),2.2*sc+1.1]);
+    Z.push(['body',dm.g.localToWorld(new T.Vector3(0,6.7+1.2*K.hs,0)),(2*K.hs)*sc+.9]);
+    Z.forEach(function(z){for(var k=0;k<2;k++){var r=S[k].distanceTo(z[1])/z[2];if(r<bs){bs=r;best={t:z[0],dm:dm,arm:z[3]||0}}}});
   });
+  if(!best)return;
+  var tg=best.dm,type=best.t;
   if(type==='nape'){
-    if(bl[cur]<=15){toast('Lâmina cega!');wear(8)}
+    if(tg.fem){tg.body.material.color.setHex(0xffffff);tg.flash=.15;toast('Pele endurecida! A nuca dela não cede');wear(10)}
+    else if(bl[cur]<=15){toast('Lâmina cega!');wear(8)}
     else{killTitan(tg,'p');toast('Nuca!');wear(6)}
   }else if(type==='eye'){
     tg.body.material.color.setHex(0xffffff);tg.flash=.15;
-    if(!tg.blind){tg.blind=true;tg.bt=0;tg.atk=0;if(tg.held)releaseHeld(tg);toast('Olhos! Titã cego por 10s')}else toast('Olhos');
+    if(!tg.blind){tg.blind=true;tg.bt=tg.fem?6:0;tg.atk=0;if(tg.held)releaseHeld(tg);toast(tg.fem?'Olhos! Ela perdeu a visão por 4s':'Olhos! Titã cego por 10s')}else toast('Olhos');
     wear(10);
   }else if(type==='arm'){
-    ripArm(tg,arm);toast('Braço arrancado!');wear(12);
-  }else if(type==='body'){
-    var leg=P.y<3.8*tg.sc+.8;
+    ripArm(tg,best.arm);toast('Braço arrancado!');wear(12);
+  }else if(type==='leg'){
     tg.body.material.color.setHex(0xffffff);tg.flash=.15;
-    if(leg&&!tg.down){legDown(tg);toast('Perna! Titã caiu')}
-    else toast(tg.down?'Corpo':(leg?'Perna':'Corpo'));
+    if(!tg.down){legDown(tg);if(tg.fem)tg.dt=6.5;toast('Perna! Titã caiu')}else toast('Perna');
     wear(15);
+  }else{
+    tg.body.material.color.setHex(0xffffff);tg.flash=.15;toast('Corpo');wear(15);
   }
 }
 function steam(x,y,z){for(var k=0;k<24;k++){var i=hI++%NP;hPos[i*3]=x+(Math.random()-.5)*2;hPos[i*3+1]=y+Math.random()*2;hPos[i*3+2]=z+(Math.random()-.5)*2;hVel[i].set((Math.random()-.5)*2,3+Math.random()*4,(Math.random()-.5)*2);hLife[i]=1.4}}
@@ -981,7 +990,7 @@ function updFlares(dt){
 
 // ================= efeitos e atualização =================
 function updFx(dt){
-  if(respawnT>0){respawnT-=dt;if(respawnT<=0){if(MODE==='exp')endMission(false,'O comandante caiu');else{hp=100;mounted=null;P.set(0,1,0);V.set(0,0,0);gas=GMAX;stam=100;hooks.forEach(release);toast('Reiniciando...')}}}
+  if(respawnT>0){respawnT-=dt;if(respawnT<=0){if(MODE==='exp')takeOver();else{hp=100;mounted=null;P.set(0,1,0);V.set(0,0,0);gas=GMAX;stam=100;hooks.forEach(release);toast('Reiniciando...')}}}
   if(slashT>0)slashT-=dt;
   if(reloadT>0){reloadT-=dt;if(reloadT<=0){bl[0]=100;bl[1]=100;spare--;toast('Lâminas novas')}}
   var s=slashT>0?1-slashT/SL:0;
@@ -1014,6 +1023,7 @@ function updFx(dt){
         if(dm.dt>10.5)dm.box.off=true;
         if(dm.dt>11.5){dm.down=false;dm.lying=false;dm.g.rotation.x=0;setBox(dm,false);dm.box.off=false}
       }
+      if(dm.stunT>0)dm.stunT-=dt;
       if(dm.blind){dm.bt+=dt;if(dm.bt>10)dm.blind=false}
       aiTitan(dm,dt);animTitan(dm,dt);
     }
@@ -1021,7 +1031,7 @@ function updFx(dt){
   });
   for(var q=0;q<NP;q++){if(hLife[q]>0){hLife[q]-=dt;hPos[q*3]+=hVel[q].x*dt;hPos[q*3+1]+=hVel[q].y*dt;hPos[q*3+2]+=hVel[q].z*dt;if(hLife[q]<=0)hPos[q*3+1]=-999}}
   hg.attributes.position.needsUpdate=true;
-  updFlares(dt);horsesUpd(dt);squadUpdate(dt);updDebris(dt);updMission(dt);spinCd-=dt;
+  updFlares(dt);horsesUpd(dt);squadUpdate(dt);updFemale(dt);updDebris(dt);updMission(dt);spinCd-=dt;
   $('bK').style.display=playerHeld?'flex':'none';$('bK').textContent='Cortar mão ('+handCuts+')';$('hpf').style.width=hp+'%';$('b0').style.width=bl[0]+'%';$('b1').style.width=bl[1]+'%';$('bs').textContent=spare;
   $('bH').textContent=mounted?'Descer':'Montar';$('stW').style.display=mounted?'block':'none';$('stf').style.width=stam+'%';
 }
@@ -1103,7 +1113,7 @@ function slotFor(s,form,Ox,Oz,hd){
   var q=trailAt(d,Ox,Oz,hd);
   return{x:q.x-q.tz*lat,z:q.z+q.tx*lat};
 }
-function nearestTitan(x,z,r){var best=null,bd=1e9;dummies.forEach(function(d){if(d.dead)return;var dd=Math.hypot(d.x-x,d.z-z);if(dd>r)return;var sc=(sq.pri==='ab'&&d.K.ab)?dd*.4:dd;if(sc<bd){bd=sc;best=d}});return best}
+function nearestTitan(x,z,r){var best=null,bd=1e9;dummies.forEach(function(d){if(d.dead)return;var dd=Math.hypot(d.x-x,d.z-z);if(dd>r)return;var sc=((sq.pri==='ab'&&d.K.ab)||(sq.pri==='fem'&&d.fem))?dd*.3:dd;if(sc<bd){bd=sc;best=d}});return best}
 function leaderOf(){for(var i=0;i<squad.length;i++)if(!squad[i].dead&&squad[i].st==='ride')return squad[i];return null}
 function sdPos(s){return s.st==='ride'?s.h.p:s.p}
 function sideIn(x,z){return z<285&&Math.abs(x)<272}
@@ -1169,7 +1179,8 @@ function fightUpdate(s,dt){
   if(s.cool>0){s.cool-=dt;return}
   if(dist<5.5){
     s.cool=1.6;
-    if(!tg.down&&tg.sc>1&&Math.random()<.4){legDown(tg);return}
+    if(!tg.down&&tg.sc>1&&!tg.fem&&Math.random()<.4){legDown(tg);return}
+    if(tg.fem){if(Math.random()<.7){tg.stunT=3.5;s.v.y+=6;s.sw=-s.sw}else{s.v.y+=6;s.v.x+=(Math.random()-.5)*10}return}
     if(Math.random()<(tg.blind||tg.down?.9:.55)){killTitan(tg,'s');s.tgt=null}
     else{s.sw=-s.sw;s.v.y+=6;s.v.x+=(Math.random()-.5)*10;s.v.z+=(Math.random()-.5)*10}
   }
@@ -1275,8 +1286,8 @@ function squadUpdate(dt){
 }
 // ---- comandante de IA: guia a formação até Maria, desvia dos titãs e avisa com sinalizador verde
 function aiCommand(dt){
-  if(sq.cmdr!=='ai'||sq.mv==='base')return;
-  var Ox=sq.o.x,Oz=sq.o.z,gz=Oz<2330?2330:(Oz<2470?2480:5800),gx=0;
+  if(sq.cmdr!=='ai'||sq.mv==='base'||sq.mv==='stop')return;
+  var Ox=sq.o.x,Oz=sq.o.z,gz=mis.stage>=5?(Oz>2460?2440:2300):(Oz<2330?2330:(Oz<2470?2480:5800)),gx=0;
   var vx=gx-Ox,vz=gz-Oz,dg=Math.hypot(vx,vz)||1;vx/=dg;vz/=dg;
   var danger=0,nearWall=Math.abs(Oz-2400)<150||Math.abs(Oz-6000)<150;
   if(!nearWall)dummies.forEach(function(d){
@@ -1292,7 +1303,6 @@ function aiCommand(dt){
     sq.gHead=sq.head;sq.lastG=tnow;spawnFlare(new T.Vector3(Ox,terrH(Ox,Oz)+3.5,Oz),'green');toast('Comandante: novo rumo '+compass(sq.head));
   }
   if(!sq.cb&&nearestTitan(Ox,Oz,70))sq.cb=true;
-  if(Oz>5750&&!sq.base){var nw=squad.filter(function(o){return o.role==='wagon'&&!o.dead}).length;sq.base={x:Ox,z:Oz,t:0,done:false,obj:buildBase({x:Ox,z:Oz},nw)};sq.mv='base';sq.cb=false}
 }
 // ---- ordens
 function setMv(m){tr.length=0;if(m==='march'||m==='fast'||m==='stop')sq.o.set(P.x,0,P.z);if(m==='stop')sq.head=sq.fh;sq.mv=m;sq.pri=''}
@@ -1370,7 +1380,7 @@ function startExp(n){
   var sx=0,sz=Oz;if(mine){sx=mine.x;sz=mine.z}
   var ph=makeHorse(sx,sz,0,0x6a4a30);myHorse=ph;mounted=ph;P.set(sx,1,sz);V.set(0,0,0);grounded=true;yaw=Math.PI;pitch=-.1;
   sq.cmdr=role==='cmd'?'me':'ai';sq.fh=0;sq.head=0;sq.cb=false;sq.form='file';sq.wide=1;tr.length=0;sq.o.set(0,0,Oz);sq.gHead=0;sq.lastG=-99;sq.fastT=0;
-  sq.mv=sq.cmdr==='me'?'follow':'march';
+  sq.mv='march';
   squad.forEach(function(s){var sl=slotFor(s,'file',0,Oz,0);s.h.p.set(sl.x,1,sl.z);s.g.position.set(sl.x,2.35,sl.z);s.g.rotation.y=Math.PI;s.h.g.position.set(sl.x,0,sl.z)});
   $('bO').style.display=sq.cmdr==='me'?'block':'none';$('qbar').style.display=sq.cmdr==='me'?'flex':'none';
   spawnExp(n);
@@ -1385,20 +1395,90 @@ function endMission(win,msg){
 }
 function updMission(dt){
   if(MODE!=='exp'||mis.over)return;
-  var alive=squad.filter(function(s){return!s.dead}).length,pz=P.z;
-  if(mis.stage===0&&pz>300){mis.stage=1;toast('Fora da muralha Sina! Rumo à muralha Rose')}
-  if(mis.stage===1&&pz>2470){mis.stage=2;toast('Muralha Rose atravessada! Rumo à muralha Maria')}
-  if(mis.stage===2&&pz>4250){mis.stage=3;toast('Floresta de árvores gigantes! Cuidado com os titãs')}
-  if(mis.stage===3&&pz>5750){mis.stage=4;toast('Muralha Maria à vista! Montar a base')}
-  if(sq.base&&sq.base.done&&sq.base.z>5600)endMission(true,'Base montada junto à muralha Maria');
+  var alive=squad.filter(function(s){return!s.dead}).length,lz=sq.cmdr==='me'?P.z:sq.o.z;
+  if(mis.stage===0&&lz>300){mis.stage=1;toast('Fora da muralha Sina! Rumo à muralha Rose')}
+  if(mis.stage===1&&lz>2470){mis.stage=2;toast('Muralha Rose atravessada! Rumo à floresta de árvores gigantes')}
+  if(mis.stage===2&&lz>4250){mis.stage=3;toast('Floresta de árvores gigantes!');spawnFemale()}
+  if(mis.stage===5&&lz<2340&&(sq.cmdr!=='me'||Math.abs(P.x)<80))endMission(true,'Titã Fêmea capturada e abatida; esquadrão de volta às muralhas');
   if(alive===0)endMission(false,'Todo o esquadrão foi perdido');
   mis.tick-=dt;
   if(mis.tick<=0){
     mis.tick=.25;
     var sc=squad.filter(function(s){return!s.dead&&s.role==='scout'}).length,vg=squad.filter(function(s){return!s.dead&&s.role==='vanguard'}).length,wg=squad.filter(function(s){return!s.dead&&s.role==='wagon'}).length;
-    var t=['Saia pela muralha Sina','Cruze a muralha Rose: '+Math.max(0,Math.round(2400-pz))+' m','Siga para a muralha Maria: '+Math.max(0,Math.round(6000-pz))+' m','Floresta de árvores gigantes: '+Math.max(0,Math.round(6000-pz))+' m até Maria','Monte a base junto à muralha Maria'+(sq.base?' — '+Math.round(sq.base.t*100)+'%':'')][mis.stage];
+    var t=['Saia pela muralha Sina','Cruze a muralha Rose: '+Math.max(0,Math.round(2400-lz))+' m','Rumo à floresta: '+Math.max(0,Math.round(4250-lz))+' m','Segure a Titã Fêmea e capture-a com as cordas','Cena','Volte às muralhas (Rose): '+Math.max(0,Math.round(lz-2340))+' m'][mis.stage];
     $('obj').innerHTML='Soldados '+alive+'/'+squad.length+' • Batedores '+sc+' • Vanguarda '+vg+' • Carroças '+wg+'<br>'+(sq.cmdr==='me'?'Você comanda':'Comandante: IA')+' • Ordem: '+({follow:'segue você',march:'marcha',fast:'galope',stop:'parado',retreat:'recuo',base:'montar base'})[sq.mv]+(sq.cb?' + combate':'')+' • Rumo: '+compass(sq.head)+' • '+({file:'fila',spread:'semicírculo',wedge:'cunha'})[sq.form]+'<br>'+t;
   }
+}
+
+
+// ================= Titã Fêmea: segurar, capturar com cordas, cena do Capitão =================
+var fem=null,femSt='none',femCap=0,femBind=0,cine={on:false,t:0},capt=null;
+var capG=new T.BufferGeometry();capG.setAttribute('position',new T.BufferAttribute(new Float32Array(40*6),3));capG.setDrawRange(0,0);
+var capL=new T.LineSegments(capG,new T.LineBasicMaterial({color:0xd8c8a0}));capL.frustumCulled=false;scene.add(capL);
+function centroid(){var x=0,z=0,n=0;squad.forEach(function(s){if(!s.dead){var p=sdPos(s);x+=p.x;z+=p.z;n++}});return n?{x:x/n,z:z/n}:{x:P.x,z:P.z}}
+function spawnFemale(){
+  var x=(Math.random()<.5?-1:1)*110,z=Math.min(5500,(sq.cmdr==='me'?P.z:sq.o.z)+300);
+  fem=makeTitan(x,z,1.5,6);fem.fem=true;fem.aggro=true;femSt='hunt';femCap=0;
+  sq.cb=true;sq.pri='fem';
+  if(sq.cmdr==='me')setMv('stop');else sq.mv='stop';
+  $('boss').style.display='block';
+  toast('Titã Fêmea à frente! Ordem: segurá-la na floresta; a fileira central a captura com as cordas');
+}
+function updFemale(dt){
+  if(!fem||femSt==='none'||femSt==='dead')return;
+  var fx=fem.x,fz=fem.z,central=0;
+  squad.forEach(function(s){if(!s.dead&&s.cr>=0&&s.role!=='wagon'&&s.st==='ride'&&Math.hypot(s.h.p.x-fx,s.h.p.z-fz)<110)central++});
+  if(femSt==='hunt'){
+    var held=fem.down||fem.blind||fem.stunT>0;
+    if(held&&central>0)femCap=Math.min(1,femCap+dt*central/35);else femCap=Math.max(0,femCap-dt*.04);
+    if(femCap>=1){femSt='bound';femBind=12;fem.bound=true;fem.atk=0;if(fem.held)releaseHeld(fem);toast('Titã Fêmea capturada com as cordas! Mantenha a posição')}
+  }else if(femSt==='bound'){
+    femBind-=dt;if(femBind<=0){fem.bound=false;femSt='free';startCine()}
+  }
+  var n=0,a=capG.attributes.position.array;
+  if(femSt==='bound'||(femSt==='hunt'&&femCap>.05)){
+    fem.g.updateMatrixWorld(true);var c=fem.g.localToWorld(new T.Vector3(0,5,0));
+    squad.forEach(function(s){if(n<38&&!s.dead&&s.cr>=0&&s.role!=='wagon'&&s.st==='ride'&&Math.hypot(s.h.p.x-fx,s.h.p.z-fz)<110){var o=n*6;a[o]=s.h.p.x;a[o+1]=s.h.p.y+2.5;a[o+2]=s.h.p.z;a[o+3]=c.x;a[o+4]=c.y;a[o+5]=c.z;n++}});
+  }
+  capG.setDrawRange(0,n*2);capG.attributes.position.needsUpdate=true;
+  $('boss').innerHTML='Titã Fêmea — '+(femSt==='bound'?'presa! solta em '+Math.max(0,Math.ceil(femBind))+' s':'captura '+Math.round(femCap*100)+'% (segure-a: pernas, olhos e golpes)');
+}
+function startCine(){
+  cine={on:true,t:0};$('bars').style.display='block';$('boss').style.display='none';
+  capt=makeSoldierModel(3);capt.userData.blade.visible=true;scene.add(capt);
+  fem.g.updateMatrixWorld(true);
+  cine.p0=new T.Vector3(fem.x+(P.x>fem.x?-70:70),terrH(fem.x,fem.z)+45,fem.z-60);
+  capt.position.copy(cine.p0);hooks.forEach(release);capG.setDrawRange(0,0);
+}
+function updCine(dt){
+  cine.t+=dt;var t=cine.t;
+  fem.g.updateMatrixWorld(true);
+  var np=fem.g.localToWorld(fem.nape.clone()),c0=fem.g.localToWorld(new T.Vector3(0,5,0));
+  var u=Math.max(0,Math.min(1,(t-1.5)/3)),e=u*u*(3-2*u),ang=e*8+1,rad=(1-e)*40+3;
+  var tx=c0.x+Math.cos(ang)*rad,ty=c0.y+(1-e)*30*Math.cos(u*3)+(np.y-c0.y)*e,tz=c0.z+Math.sin(ang)*rad;
+  if(t<1.5)capt.position.copy(cine.p0);else{capt.position.x+=(tx-capt.position.x)*Math.min(1,dt*10);capt.position.y+=(ty-capt.position.y)*Math.min(1,dt*10);capt.position.z+=(tz-capt.position.z)*Math.min(1,dt*10)}
+  capt.rotation.y=Math.atan2(tx-c0.x,tz-c0.z)+Math.PI/2;capt.rotation.z=t*10;
+  if(t>4.6&&femSt==='free'){femSt='dead';killTitan(fem,'x');stats.kp--;toast('Titã Fêmea derrotada!')}
+  if(t<1.5){cam.position.set(fem.x-50,terrH(fem.x,fem.z)+22,fem.z-60);cam.lookAt(c0)}
+  else if(t<4.6){var dx=capt.position.x-c0.x,dz=capt.position.z-c0.z,dl=Math.hypot(dx,dz)||1;cam.position.set(capt.position.x+dx/dl*14,capt.position.y+5,capt.position.z+dz/dl*14);cam.lookAt(capt.position)}
+  else{var a2=(t-4.6)*.6;cam.position.set(c0.x+Math.cos(a2)*45,c0.y+8,c0.z+Math.sin(a2)*45);cam.lookAt(c0)}
+  if(t>8){
+    cine.on=false;$('bars').style.display='none';scene.remove(capt);capt=null;mis.stage=5;sq.cb=false;sq.pri='';
+    if(sq.cmdr==='me'){sq.head=Math.PI;setMv('march')}else{sq.mv='march';sq.head=Math.PI}
+    toast('Missão: voltar às muralhas');
+  }
+}
+function takeOver(){
+  var c=null,bd=1e9;
+  squad.forEach(function(s){if(s.dead||s.st!=='ride'||s.role==='wagon'||s.role==='commander')return;var d=Math.hypot(s.h.p.x-P.x,s.h.p.z-P.z);if(d<bd){bd=d;c=s}});
+  if(!c){endMission(false,'Todo o esquadrão foi perdido');return}
+  squad.splice(squad.indexOf(c),1);c.g.visible=false;
+  var h=c.h;h.owner=false;myHorse=h;mounted=h;hp=100;playerHeld=null;P.set(h.p.x,h.p.y,h.p.z);V.set(0,0,0);grounded=true;hooks.forEach(release);
+  if(sq.cmdr==='me'){
+    sq.cmdr='ai';var cc=centroid();sq.o.set(cc.x,0,cc.z);if(sq.mv==='follow'||sq.mv==='retreat')sq.mv='march';sq.head=sq.fh;
+    $('bO').style.display='none';$('qbar').style.display='none';
+    toast('Você caiu! Assumiu o lugar de um soldado; uma IA comanda agora');
+  }else toast('Você caiu! Assumiu o lugar de outro soldado');
 }
 
 // ================= laço principal =================
@@ -1406,10 +1486,17 @@ var clock=new T.Clock(),camLook=new T.Vector3();
 function loop(){
   requestAnimationFrame(loop);
   var dt=Math.min(clock.getDelta(),.04);
+  if(cine.on){updFx(dt);updCine(dt);ren.render(scene,cam);return}
   var n=Math.min(10,Math.max(2,Math.ceil(V.length()*dt/.3)));for(var s=0;s<n;s++)step(dt/n);
-  hero.position.copy(P);if(mounted)hero.position.y+=1.35;
+  hero.position.copy(P);if(mounted)hero.position.y+=1.35;else if(grounded&&Math.hypot(V.x,V.z)>1.2)hero.position.y+=Math.abs(Math.sin(hLegPh))*.1;
   var hs=Math.hypot(V.x,V.z);
   hero.rotation.y=(mounted?mounted.ry+Math.PI:(hs>2?Math.atan2(V.x,V.z)+Math.PI:yaw))+slTw;
+  var run=grounded&&!mounted&&hs>1.2;hLegPh+=dt*(hs*1.15+(run?2:0));
+  var lamp=run?Math.min(.95,.25+hs*.1):0;
+  if(mounted){hLegs[0].rotation.set(.7,0,.35);hLegs[1].rotation.set(.7,0,-.35)}
+  else if(run){hLegs[0].rotation.set(Math.sin(hLegPh)*lamp,0,0);hLegs[1].rotation.set(-Math.sin(hLegPh)*lamp,0,0)}
+  else if(!grounded){hLegs[0].rotation.set(.35,0,.05);hLegs[1].rotation.set(.65,0,-.05)}
+  else{hLegs[0].rotation.set(0,0,0);hLegs[1].rotation.set(0,0,0)}
   var vpa=Math.atan2(V.y,Math.max(hs,2));
   hero.rotation.x=(grounded||mounted)?0:Math.max(-.9,Math.min(.6,-.3+vpa*.5));
   var hd2=Math.atan2(V.x,V.z),hrate=angDiff(prevHd,hd2)/Math.max(dt,.001);prevHd=hd2;
